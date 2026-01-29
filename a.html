@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giao diện EPS TOPIK (Có Audio & TTS) - OBS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --correct-color: #22c55e;
+            --wrong-color: #ef4444;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-color: #1f2937;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Noto Sans KR', 'Roboto', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .obs-container {
+            width: 1280px;
+            height: 720px;
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            padding: 40px;
+            position: relative;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 15px;
+        }
+
+        .question-number {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary-color);
+            background: #e0f2fe;
+            padding: 8px 20px;
+            border-radius: 10px;
+        }
+
+        .timer {
+            font-size: 32px;
+            font-weight: 700;
+            color: #d97706;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Content Layout */
+        .content-area {
+            flex: 1;
+            display: flex;
+            gap: 40px;
+            overflow: hidden; /* Tránh tràn layout */
+        }
+
+        /* Left Column */
+        .question-col {
+            flex: 1.3;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto; /* Cho phép cuộn nếu đề quá dài */
+            padding-right: 10px;
+        }
+
+        .question-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .question-text {
+            font-size: 24px;
+            line-height: 1.5;
+            font-weight: 500;
+            flex: 1;
+        }
+
+        /* Nút đọc TTS */
+        .tts-btn {
+            background: #8b5cf6;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: transform 0.2s;
+            flex-shrink: 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .tts-btn:hover { transform: scale(1.1); background: #7c3aed; }
+        .tts-btn:active { transform: scale(0.95); }
+
+        /* Trình phát Audio MP3 */
+        .audio-player-container {
+            width: 100%;
+            background: #f1f5f9;
+            padding: 10px;
+            border-radius: 10px;
+            display: none; /* Mặc định ẩn */
+            border: 1px solid #cbd5e1;
+        }
+        
+        audio {
+            width: 100%;
+            height: 40px;
+        }
+
+        .question-image {
+            width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            border: 2px dashed #d1d5db;
+            border-radius: 10px;
+            display: none;
+        }
+
+        /* Right Column */
+        .options-col {
+            flex: 0.7;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .option-btn {
+            background: #f9fafb;
+            border: 2px solid #d1d5db;
+            border-radius: 12px;
+            padding: 18px;
+            font-size: 22px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Noto Sans KR', sans-serif;
+            position: relative;
+        }
+
+        .option-btn:hover { border-color: var(--primary-color); background: #eff6ff; }
+
+        .option-btn.correct {
+            background-color: #dcfce7 !important;
+            border-color: var(--correct-color) !important;
+            color: #14532d;
+            font-weight: bold;
+        }
+
+        .option-btn.wrong {
+            background-color: #fee2e2 !important;
+            border-color: var(--wrong-color) !important;
+            color: #7f1d1d;
+        }
+
+        .option-index {
+            display: inline-block;
+            width: 30px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        /* Controls */
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-btns { display: flex; gap: 15px; }
+
+        .btn {
+            padding: 10px 24px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .btn-prev { background: #9ca3af; color: white; }
+        .btn-next { background: var(--primary-color); color: white; }
+        .btn-next:hover { background: #2563eb; }
+
+        /* Giải thích */
+        .explanation-box {
+            margin-top: 10px;
+            padding: 15px;
+            background: #fffbeb;
+            border-left: 5px solid #f59e0b;
+            font-size: 18px;
+            display: none;
+            border-radius: 0 8px 8px 0;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="obs-container">
+        <div class="header">
+            <div class="question-number" id="q-number">Câu 1</div>
+            <div class="timer" id="timer">⏳ 00:30</div>
+        </div>
+
+        <div class="content-area">
+            <div class="question-col">
+                <div class="question-header">
+                    <div class="question-text" id="q-text">Loading...</div>
+                    <button class="tts-btn" id="tts-btn" onclick="speakQuestion()" title="Đọc câu hỏi">
+                        <i class="fas fa-volume-up"></i>
+                    </button>
+                </div>
+
+                <div class="audio-player-container" id="audio-container">
+                    <audio id="audio-player" controls>
+                        <source src="" type="audio/mpeg">
+                        Trình duyệt của bạn không hỗ trợ thẻ audio.
+                    </audio>
+                </div>
+
+                <img src="" id="q-image" class="question-image" alt="Question Image">
+                
+                <div class="explanation-box" id="explanation">
+                    <strong>💡 Giải thích:</strong> <span id="explain-text"></span>
+                </div>
+            </div>
+
+            <div class="options-col" id="options-container"></div>
+        </div>
+
+        <div class="controls">
+            <div style="color: #6b7280; font-style: italic;">Phím tắt: ⬅ (Lùi) | ➡ (Tiếp)</div>
+            <div class="nav-btns">
+                <button class="btn btn-prev" onclick="prevQuestion()">Lùi lại</button>
+                <button class="btn btn-next" onclick="nextQuestion()">Tiếp theo ➡</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DỮ LIỆU CÂU HỎI ---
+        const examData = [
+            {
+                id: 1,
+                type: "reading", // 'reading' hoặc 'listening'
+                question: "빈칸에 들어갈 가장 알맞은 것을 고르십시오.",
+                audioFile: "", // Không có file nghe
+                image: "", 
+                options: ["가다", "오다", "먹다", "자다"],
+                correct: 0,
+                explanation: "Chọn '가다' (Đi) là phù hợp nhất."
+            },
+            {
+                id: 2,
+                type: "listening", // Câu hỏi nghe
+                question: "다음을 듣고 알맞은 대답을 고르십시오. (Nghe và chọn câu trả lời đúng)",
+                audioFile: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", // Link file MP3 (Demo online)
+                image: "https://via.placeholder.com/600x300?text=Listening+Question",
+                options: ["네, 알겠습니다.", "아니요, 없습니다.", "반갑습니다.", "안녕히 가세요."],
+                correct: 2,
+                explanation: "Người nói chào hỏi nên đáp lại là '반갑습니다' (Rất vui được gặp)."
+            },
+            {
+                id: 3,
+                type: "reading",
+                question: "다음 표지판의 뜻은 무엇입니까?",
+                questionKorean: "다음 표지판의 뜻은 무엇입니까?", // Chỉ định văn bản tiếng Hàn để máy đọc (nếu question có cả tiếng Việt)
+                audioFile: "",
+                image: "https://via.placeholder.com/600x300?text=No+Smoking",
+                options: ["금연", "주차금지", "손씻기", "정숙"],
+                correct: 0,
+                explanation: "Biển báo cấm hút thuốc là '금연'."
+            }
+        ];
+
+        // --- CẤU HÌNH ---
+        let currentIdx = 0;
+        let timeLeft = 30;
+        let timerInterval;
+        let answered = false;
+
+        // Elements
+        const els = {
+            num: document.getElementById('q-number'),
+            text: document.getElementById('q-text'),
+            image: document.getElementById('q-image'),
+            options: document.getElementById('options-container'),
+            timer: document.getElementById('timer'),
+            expBox: document.getElementById('explanation'),
+            expText: document.getElementById('explain-text'),
+            ttsBtn: document.getElementById('tts-btn'),
+            audioContainer: document.getElementById('audio-container'),
+            audioPlayer: document.getElementById('audio-player')
+        };
+
+        function loadQuestion(index) {
+            // Reset
+            clearInterval(timerInterval);
+            timeLeft = 30;
+            updateTimerDisplay();
+            startTimer();
+            answered = false;
+            els.expBox.style.display = 'none';
+            
+            // Dừng audio cũ nếu đang phát
+            els.audioPlayer.pause();
+            els.audioPlayer.currentTime = 0;
+
+            const data = examData[index];
+            els.num.textContent = `Câu ${index + 1} / ${examData.length}`;
+            els.text.innerHTML = data.question.replace(/\n/g, "<br>");
+
+            // Xử lý Audio / TTS
+            if (data.type === 'listening' && data.audioFile) {
+                // Chế độ NGHE
+                els.ttsBtn.style.display = 'none'; // Ẩn nút đọc
+                els.audioContainer.style.display = 'block'; // Hiện trình phát nhạc
+                els.audioPlayer.src = data.audioFile;
+                // els.audioPlayer.play(); // Bỏ comment nếu muốn tự động phát
+            } else {
+                // Chế độ ĐỌC
+                els.ttsBtn.style.display = 'flex'; // Hiện nút đọc
+                els.audioContainer.style.display = 'none'; // Ẩn trình phát nhạc
+            }
+
+            // Xử lý Ảnh
+            if(data.image) {
+                els.image.src = data.image;
+                els.image.style.display = 'block';
+            } else {
+                els.image.style.display = 'none';
+            }
+
+            // Tạo đáp án
+            els.options.innerHTML = '';
+            data.options.forEach((opt, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerHTML = `<span class="option-index">${i+1}</span> ${opt}`;
+                btn.onclick = () => checkAnswer(i, btn);
+                els.options.appendChild(btn);
+            });
+        }
+
+        // --- HÀM ĐỌC TIẾNG HÀN (TTS) ---
+        function speakQuestion() {
+            const data = examData[currentIdx];
+            // Ưu tiên đọc trường 'questionKorean' nếu có, không thì đọc 'question'
+            const textToRead = data.questionKorean || data.question;
+
+            // Xóa các lệnh đọc cũ để tránh bị chồng chéo
+            window.speechSynthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(textToRead);
+            utterance.lang = 'ko-KR'; // Mã ngôn ngữ tiếng Hàn
+            utterance.rate = 0.9; // Tốc độ đọc (0.1 -> 10), 0.9 là vừa
+            utterance.pitch = 1;  // Tông giọng
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function checkAnswer(selectedIndex, btnElement) {
+            if (answered) return;
+            answered = true;
+            clearInterval(timerInterval);
+
+            const correctIndex = examData[currentIdx].correct;
+            const allBtns = document.querySelectorAll('.option-btn');
+
+            if (selectedIndex === correctIndex) {
+                btnElement.classList.add('correct');
+            } else {
+                btnElement.classList.add('wrong');
+                allBtns[correctIndex].classList.add('correct');
+            }
+
+            els.expText.textContent = examData[currentIdx].explanation;
+            els.expBox.style.display = 'block';
+        }
+
+        function nextQuestion() {
+            if (currentIdx < examData.length - 1) {
+                currentIdx++;
+                loadQuestion(currentIdx);
+            }
+        }
+
+        function prevQuestion() {
+            if (currentIdx > 0) {
+                currentIdx--;
+                loadQuestion(currentIdx);
+            }
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    els.timer.textContent = "⏰ Hết giờ!";
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            els.timer.textContent = `⏳ 00:${timeLeft < 10 ? '0'+timeLeft : timeLeft}`;
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if(e.key === "ArrowRight") nextQuestion();
+            if(e.key === "ArrowLeft") prevQuestion();
+            // Phím Space để nghe lại (nếu là bài nghe) hoặc đọc câu hỏi
+            if(e.key === " ") {
+                e.preventDefault(); // Tránh trôi trang
+                const data = examData[currentIdx];
+                if(data.type === 'listening') {
+                    if(els.audioPlayer.paused) els.audioPlayer.play();
+                    else els.audioPlayer.pause();
+                } else {
+                    speakQuestion();
+                }
+            }
+        });
+
+        // Init
+        loadQuestion(0);
+
+    </script>
+</body>
+</html>

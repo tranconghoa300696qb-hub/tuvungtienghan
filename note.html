@@ -1,0 +1,80 @@
+// cú pháp sql thêm bài mới vào csdl
+// luu anh o day
+// https://console.cloudinary.com/app/c-8943bf0ccdf81abc36d71af887f91f/assets/media_library/folders/cdf9e34184096c4b970d234f23397bb79d?view_mode=mosaic
+BOOK
+https://epstopik.hrdkorea.or.kr/epstopik/ebook/Vietnam_1_j/index.html#page=73
+
+
+
+
+CREATE TABLE exams (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE questions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    exam_id INT,
+    type ENUM('reading', 'listening') DEFAULT 'reading',
+    question_text TEXT,        -- Nội dung câu hỏi (tiếng Việt/Hàn)
+    question_korean TEXT,      -- Chỉ tiếng Hàn để máy đọc (TTS)
+    image_url VARCHAR(255),    -- Link ảnh (nếu có)
+    audio_url VARCHAR(255),    -- Link file mp3 (nếu là bài nghe)
+    option_1 TEXT NOT NULL,
+    option_2 TEXT NOT NULL,
+    option_3 TEXT NOT NULL,
+    option_4 TEXT NOT NULL,
+    correct_index INT NOT NULL, -- Giá trị từ 1 đến 4
+    explanation TEXT,          -- Giải thích đáp án
+    FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE
+);
+
+-- Thêm dữ liệu mẫu (1 đề thi, 1 câu hỏi)
+INSERT INTO exams (title) VALUES ('Đề thi mẫu EPS số 01');
+INSERT INTO questions (exam_id, type, question_text, question_korean, option_1, option_2, option_3, option_4, correct_index, explanation)
+VALUES (1, 'reading', 'Chọn từ đúng cho tranh sau:', '다음 그림을 보고 맞는 단어를 고르십시오.', '가방', '구두', '모자', '안경', 1, 'Đây là cái túi (가방).');
+
+
+
+
+ALTER TABLE questions 
+ADD COLUMN instruction_kr TEXT AFTER type,
+ADD COLUMN question_content_kr TEXT AFTER instruction_kr;
+
+-- Ví dụ cập nhật 1 câu mẫu:
+-- instruction_kr: [1~2] 다음 그림을 보고 맞는 단어나 문장을 고르십시오. (Yêu cầu đề bài)
+-- question_content_kr: 이 것은 무엇입니까? (Nội dung câu hỏi cụ thể)
+
+
+
+-- 1. Tắt kiểm tra khóa ngoại để xóa dữ liệu
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- 2. Xóa dữ liệu cũ bằng lệnh DELETE (thay vì TRUNCATE)
+DELETE FROM questions;
+DELETE FROM exams;
+
+-- 3. Reset lại bộ đếm ID về 1 cho đẹp
+ALTER TABLE questions AUTO_INCREMENT = 1;
+ALTER TABLE exams AUTO_INCREMENT = 1;
+
+-- 4. Bật lại kiểm tra khóa ngoại
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- 5. Thêm 3 đề thi mẫu
+INSERT INTO exams (id, title) VALUES 
+(1, 'EPS-TOPIK 실전모의고사 01'),
+(2, 'EPS-TOPIK 실전모의고사 02'),
+(3, 'EPS-TOPIK 듣기 연습 (Luyện nghe)');
+
+-- 6. Thêm câu hỏi mẫu cho Đề 1 (Đọc hiểu)
+-- Lưu ý: Đảm bảo bảng của bạn đã có cột instruction_kr và question_content_kr
+INSERT INTO questions (exam_id, type, instruction_kr, question_content_kr, option_1, option_2, option_3, option_4, correct_index, explanation)
+VALUES 
+(1, 'reading', '[1~2] 다음 그림을 보고 맞는 단어나 문장을 고르십시오.', '이것은 무엇입니까?', '가방입니다', '구두입니다', '수건입니다', '안경입니다', 1, 'Đây là cái túi (가방).'),
+(1, 'reading', '[1~2] 다음 그림을 보고 맞는 단어나 문장을 고르십시오.', '이 사람은 무엇을 하고 있습니까?', '자고 있습니다', '공부합니다', '요리합니다', '운동합니다', 3, 'Người này đang nấu ăn (요리합니다).');
+
+-- 7. Thêm câu hỏi mẫu cho Đề 2
+INSERT INTO questions (exam_id, type, instruction_kr, question_content_kr, option_1, option_2, option_3, option_4, correct_index, explanation)
+VALUES 
+(2, 'reading', '[3~4] 빈칸에 들어갈 가장 알맞은 것을 고르십시오.', '가: 이 구두가 얼마예요? \n나: 삼만 ________예요.', '원', '개', '명', '병', 1, 'Đơn vị tiền tệ của Hàn Quốc là Won (원).');
