@@ -22,3 +22,4 @@ if ($type === 'categories') {
     echo json_encode($stmt->get_result()->fetch_all(MYSQLI_ASSOC));
 }
 ?>
+

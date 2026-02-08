@@ -97,14 +97,6 @@
     </aside>
 
     <script>
-        // Ép trình duyệt nạp voices ngay khi vào trang
-window.speechSynthesis.getVoices();
-if (speechSynthesis.onvoiceschanged !== undefined) {
-    speechSynthesis.onvoiceschanged = () => {
-        speechSynthesis.getVoices();
-        console.log("Voices loaded");
-    };
-}
 let vocabList = [];
 let currentIndex = 0;
 let isPlaying = false;
@@ -182,40 +174,29 @@ function speak(text, langType) {
 }
 
 // 3. Logic vòng lặp tự động (Đã tối ưu)
-
-// --- SỬA LẠI VÒNG LẶP ĐỂ ĐẢM BẢO THỨ TỰ HIỆN CHỮ ---
 async function runLoop() {
     while (isPlaying && currentIndex < vocabList.length) {
+        updateCard();
         
-        // 1. Lật về mặt trước và xóa chữ cũ
-        card.classList.remove('is-flipped');
-        updateCard('front'); // Chỉ hiện tiếng Hàn, tiếng Việt để "..."
-        
-        // Đợi hiệu ứng xoay (0.6s) hoàn tất rồi mới làm bước tiếp theo
-        await new Promise(r => setTimeout(r, 700));
+        // Nói tiếng Hàn
+        await new Promise(r => setTimeout(r, 600));
         if (!isPlaying) break;
-
-        // 2. Đọc tiếng Hàn (Sun-Hi)
         await speak(vocabList[currentIndex].ko, 'ko');
 
-        // Chờ một chút sau khi đọc xong
-        await new Promise(r => setTimeout(r, 800));
+        // Chờ và lật
+        await new Promise(r => setTimeout(r, 900));
         if (!isPlaying) break;
-        
-        // 3. Chuẩn bị chữ mặt sau và Lật
-        updateCard('back'); // Lúc này mới nạp chữ tiếng Việt vào
         card.classList.add('is-flipped');
 
-        // Đợi lật xong (0.6s) rồi mới đọc tiếng Việt
+        // Nói tiếng Việt
         await new Promise(r => setTimeout(r, 700));
         if (!isPlaying) break;
-        
-        // 4. Đọc tiếng Việt (Hoài My)
         await speak(vocabList[currentIndex].vi, 'vi');
 
-        // Nghỉ giữa các từ
-        await new Promise(r => setTimeout(r, 1500));
-        
+        // Chờ từ tiếp theo
+        await new Promise(r => setTimeout(r, 900));
+        if (!isPlaying) break;
+
         if (currentIndex < vocabList.length - 1) {
             currentIndex++;
         } else {
@@ -251,30 +232,16 @@ async function loadVocab(id, title, el) {
     } catch (e) { alert("Lỗi tải từ vựng!"); }
 }
 
-
-// --- SỬA LẠI HÀM UPDATE CARD ĐỂ KIỂM SOÁT NỘI DUNG ---
-function updateCard(side = 'both') {
-    if (!vocabList || vocabList.length === 0) return;
+function updateCard() {
+    if (!vocabList.length) return;
     const item = vocabList[currentIndex];
+    imgBox.style.display = item.img?.trim() ? "block" : "none";
+    if (item.img?.trim()) imgEl.src = item.img;
     
-    if (side === 'front' || side === 'both') {
-        koEl.innerText = item.ko;
-        // Xử lý ảnh ở mặt trước
-        if (item.img && item.img.trim() !== "") {
-            imgEl.src = item.img;
-            imgBox.style.display = "block";
-        } else {
-            imgBox.style.display = "none";
-        }
-    }
-    
-    if (side === 'back' || side === 'both') {
-        viEl.innerText = item.vi;
-    } else if (side === 'front') {
-        viEl.innerText = ""; // Xóa chữ tiếng Việt khi đang ở mặt trước
-    }
-    
+    koEl.innerText = item.ko;
+    viEl.innerText = item.vi;
     counterEl.innerText = `${currentIndex + 1} / ${vocabList.length}`;
+    card.classList.remove('is-flipped');
 }
 
 function toggleAutoPlay() {

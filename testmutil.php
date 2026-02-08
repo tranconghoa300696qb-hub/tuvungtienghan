@@ -227,24 +227,45 @@ async function runLoop() {
 
 // --- CÁC HÀM BỔ TRỢ (GIỮ NGUYÊN HOẶC TỐI ƯU NHẸ) ---
 
+// 1. Hàm nạp Danh mục lớn (Giao diện ban đầu)
 async function loadCategories() {
     try {
-        const res = await fetch('data.php?type=categories');
+        const res = await fetch('data2.php?type=categories&parent_id=0');
         const data = await res.json();
-        document.getElementById('category-list').innerHTML = data.map(cat => `
-            <div class="category-item" onclick="loadVocab(${cat.id}, '${cat.title}', this)">${cat.title}</div>
-        `).join('');
-    } catch (e) { console.error("Lỗi kết nối server"); }
+        let html = ``;
+        data.forEach(cat => {
+            html += `<div class="category-item" onclick="loadSubCategories(${cat.id}, '${cat.title}')">${cat.title}</div>`;
+        });
+        document.getElementById('category-list').innerHTML = html;
+    } catch (e) { console.error("Lỗi kết nối"); }
+}
+// 2. Hàm nạp Bài học khi nhấn vào Danh mục lớn
+async function loadSubCategories(parentId, parentTitle) {
+    stopPlay();
+    document.getElementById('lesson-title').innerText = parentTitle;
+    try {
+        const res = await fetch(`data2.php?type=categories&parent_id=${parentId}`);
+        const data = await res.json();
+        
+        let html = `<div onclick="loadCategories()" style="cursor:pointer; color:var(--primary); padding:10px; font-weight:bold">⬅ QUAY LẠI</div>`;
+        data.forEach(sub => {
+            html += `<div class="category-item" onclick="loadVocabDetail(${sub.id}, '${sub.title}', this)">${sub.title}</div>`;
+        });
+        
+        if(data.length === 0) html += `<div style="padding:10px">Chưa có bài học nào trong mục này.</div>`;
+        document.getElementById('category-list').innerHTML = html;
+    } catch (e) { console.error("Lỗi nạp bài học"); }
 }
 
-async function loadVocab(id, title, el) {
+// 3. Hàm nạp Flashcard (Giữ nguyên logic của bạn nhưng sửa tên hàm)
+async function loadVocabDetail(id, title, el) {
     stopPlay();
     document.querySelectorAll('.category-item').forEach(i => i.classList.remove('active'));
     el.classList.add('active');
     document.getElementById('lesson-title').innerText = title;
 
     try {
-        const res = await fetch(`data.php?type=vocab&cat_id=${id}`);
+        const res = await fetch(`data2.php?type=vocab&cat_id=${id}`);
         vocabList = await res.json();
         currentIndex = 0;
         updateCard();
@@ -314,7 +335,7 @@ function manualFlip() { if (!isPlaying) card.classList.toggle('is-flipped'); }
 function nextWord() { if (currentIndex < vocabList.length - 1) { currentIndex++; updateCard(); } }
 function prevWord() { if (currentIndex > 0) { currentIndex--; updateCard(); } }
 
-// Khởi chạy
+// Cuối file gọi hàm khởi chạy
 loadCategories();
 window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
     </script>

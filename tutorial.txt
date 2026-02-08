@@ -1,0 +1,133 @@
+Chào bạn, để giải quyết yêu cầu xây dựng hệ thống phân cấp 3 tầng (Danh mục lớn -> Danh sách bài học -> Chi tiết bài) mà không làm hỏng cấu trúc code hiện tại, chúng ta cần thực hiện 2 bước: Điều chỉnh cấu trúc logic trong Database và Cập nhật file xử lý dữ liệu (data.php).
+
+Dựa trên file korean_db.sql bạn đã cung cấp, tôi sẽ tối ưu hóa cách truy vấn để đáp ứng yêu cầu của bạn.
+
+1. Phân tích & Chuẩn hóa Database
+Hiện tại bảng categories của bạn đã có parent_id. Chúng ta sẽ quy ước:
+
+Level 1 (Danh mục lớn): parent_id = 0 (Gồm: Từ Vựng, Giải Đề, Nghe, Đặt Câu).
+
+Level 2 (Danh sách bài học): parent_id = ID của danh mục lớn.
+
+Level 3 (Dữ liệu chi tiết): Liên kết với Level 2 thông qua category_id trong bảng vocabulary.
+
+2. Xây dựng file Backend (data.php)
+File này sẽ xử lý linh hoạt 3 loại request: Lấy danh mục gốc, lấy danh sách bài học, và lấy nội dung bài học.
+
+PHP
+<?php
+header('Content-Type: application/json; charset=utf-8');
+$host = 'localhost';
+$db   = 'korean_db';
+$user = 'root';
+$pass = ''; // Thay đổi theo config của bạn
+$charset = 'utf8mb4';
+
+$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+try {
+    $pdo = new PDO($dsn, $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+} catch (PDOException $e) {
+    echo json_encode(['error' => $e->getMessage()]);
+    exit;
+}
+
+$type = $_GET['type'] ?? '';
+
+// 1. Lấy danh mục lớn (Level 1)
+if ($type === 'categories') {
+    $stmt = $pdo->query("SELECT id, title FROM categories WHERE parent_id = 0");
+    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+}
+
+// 2. Lấy danh sách bài học thuộc danh mục lớn (Level 2)
+elseif ($type === 'sub_categories') {
+    $parent_id = (int)($_GET['parent_id'] ?? 0);
+    $stmt = $pdo->prepare("SELECT id, title FROM categories WHERE parent_id = ?");
+    $stmt->execute([$parent_id]);
+    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+}
+
+// 3. Lấy chi tiết bài học (Level 3 - Flashcards)
+elseif ($type === 'vocab') {
+    $cat_id = (int)($_GET['cat_id'] ?? 0);
+    // Tối ưu: Lấy từ vựng của bài học đó
+    $stmt = $pdo->prepare("SELECT word as ko, definition as vi, image as img FROM vocabulary WHERE category_id = ?");
+    $stmt->execute([$cat_id]);
+    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+}
+?>
+3. Cập nhật giao diện (Frontend Logic)
+Tôi sẽ sửa lại các hàm loadCategories và thêm hàm trung gian để xử lý việc "Nhấn vào danh mục -> Ra danh sách bài". Các phần CSS và cấu trúc thẻ Card của bạn được giữ nguyên.
+
+Bạn hãy thay thế đoạn <script> cũ bằng đoạn này:
+
+JavaScript
+// Biến lưu trữ trạng thái hiện tại
+let vocabList = [];
+let currentIndex = 0;
+let isPlaying = false;
+
+// 1. Tải danh mục lớn (Từ vựng, Nghe,...)
+async function loadCategories() {
+    try {
+        const res = await fetch('data.php?type=categories');
+        const data = await res.json();
+        let html = `<h3>CHỦ ĐỀ CHÍNH</h3>`;
+        data.forEach(cat => {
+            html += `<div class="category-item" onclick="loadSubCategories(${cat.id}, '${cat.title}')">${cat.title}</div>`;
+        });
+        document.getElementById('category-list').innerHTML = html;
+    } catch (e) { console.error("Lỗi nạp danh mục"); }
+}
+
+// 2. Tải danh sách bài học (Khi nhấn vào Từ Vựng sẽ hiện: Bài 1, Bài 2...)
+async function loadSubCategories(parentId, parentTitle) {
+    stopPlay();
+    document.getElementById('lesson-title').innerText = parentTitle.toUpperCase();
+    try {
+        const res = await fetch(`data.php?type=sub_categories&parent_id=${parentId}`);
+        const data = await res.json();
+        
+        let html = `<div onclick="loadCategories()" style="cursor:pointer; color:var(--primary); margin-bottom:10px;">⬅ Quay lại</div>`;
+        html += `<h3>BÀI HỌC</h3>`;
+        
+        if(data.length === 0) html += `<p>Chưa có bài học nào.</p>`;
+        
+        data.forEach(sub => {
+            html += `<div class="category-item" onclick="loadVocabDetail(${sub.id}, '${sub.title}', this)">${sub.title}</div>`;
+        });
+        document.getElementById('category-list').innerHTML = html;
+    } catch (e) { console.error("Lỗi nạp bài học"); }
+}
+
+// 3. Tải chi tiết bài học (Flashcards)
+async function loadVocabDetail(id, title, el) {
+    stopPlay();
+    document.querySelectorAll('.category-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('lesson-title').innerText = title;
+
+    try {
+        const res = await fetch(`data.php?type=vocab&cat_id=${id}`);
+        vocabList = await res.json();
+        currentIndex = 0;
+        if(vocabList.length > 0) {
+            updateCard();
+        } else {
+            alert("Bài học này chưa có dữ liệu!");
+        }
+    } catch (e) { alert("Lỗi tải nội dung!"); }
+}
+
+// Giữ nguyên các hàm: speak(), runLoop(), updateCard(), toggleAutoPlay(), stopPlay() 
+// từ code cũ của bạn vì chúng đã hoạt động tốt với giọng đọc Hoài My & Sun-Hi.
+Điểm tối ưu trong bản sửa này:
+Trải nghiệm người dùng (UX): Có nút "Quay lại" khi đang ở danh sách bài học để người dùng chọn lại danh mục lớn (Từ vựng/Nghe/Giải đề).
+
+Đúng yêu cầu phân cấp: Bạn không còn nạp tất cả category cùng lúc mà nạp theo tầng, giúp sidebar gọn gàng hơn khi database lớn dần.
+
+Tương thích ngược: Cấu trúc dữ liệu trả về (ko, vi, img) vẫn giữ nguyên như code gốc của bạn nên các hàm xử lý Flashcard và Giọng đọc không bị lỗi.
+
+Hiệu suất: Truy vấn SQL chỉ lấy đúng những gì cần thiết cho từng bước, giảm tải cho server.
+
+Bạn có muốn tôi hỗ trợ thêm phần hiển thị icon cho từng danh mục lớn (ví dụ: hình cái tai cho mục "Nghe") để giao diện sinh động hơn không?

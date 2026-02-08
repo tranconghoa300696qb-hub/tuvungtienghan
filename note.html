@@ -78,3 +78,22 @@ VALUES
 INSERT INTO questions (exam_id, type, instruction_kr, question_content_kr, option_1, option_2, option_3, option_4, correct_index, explanation)
 VALUES 
 (2, 'reading', '[3~4] 빈칸에 들어갈 가장 알맞은 것을 고르십시오.', '가: 이 구두가 얼마예요? \n나: 삼만 ________예요.', '원', '개', '명', '병', 1, 'Đơn vị tiền tệ của Hàn Quốc là Won (원).');
+
+
+
+CREATE TABLE categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    parent_id INT DEFAULT 0, -- Nếu là 0 thì là danh mục gốc (ví dụ: Từ vựng, Bài tập)
+    type ENUM('category', 'lesson', 'exercise') DEFAULT 'category', -- Phân loại nhanh
+    slug VARCHAR(255) -- Để làm URL thân thiện (ví dụ: tu-vung, bai-1)
+);
+
+ALTER TABLE `categories`
+ADD COLUMN `parent_id` INT DEFAULT 0 AFTER `id`,
+ADD COLUMN `type` ENUM('từ vựng', 'giải đề', 'nghe', 'đặt câu') DEFAULT 'từ vựng' AFTER `title`,
+ADD COLUMN `slug` VARCHAR(255) NOT NULL AFTER `type`,
+ADD UNIQUE (`slug`);
+
+ALTER TABLE `categories` 
+ADD COLUMN `slug` VARCHAR(255) NULL AFTER `type`;
