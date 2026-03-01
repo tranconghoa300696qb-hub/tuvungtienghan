@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPS-TOPIK Mock Test for YouTube</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+            --correct-color: #27ae60;
+        }
+
+        body {
+            font-family: 'Roboto', 'Noto Sans KR', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #app-container {
+            width: 90%;
+            max-width: 1000px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 40px;
+            border-top: 10px solid var(--accent-color);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .question-number {
+            background: var(--primary-color);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .timer {
+            font-size: 1.5rem;
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .question-text {
+            font-size: 1.8rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            color: var(--text-color);
+        }
+
+        .image-container {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .image-container img {
+            max-width: 300px;
+            border-radius: 10px;
+            border: 3px solid #eee;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .option-card {
+            background: #fff;
+            border: 2px solid #ddd;
+            padding: 20px;
+            border-radius: 15px;
+            font-size: 1.4rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .option-card:hover {
+            border-color: var(--accent-color);
+            background: #f0f8ff;
+            transform: translateY(-3px);
+        }
+
+        .option-card.selected {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .option-number {
+            margin-right: 15px;
+            font-weight: bold;
+            background: rgba(0,0,0,0.1);
+            width: 35px;
+            height: 35px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+        }
+
+        .controls {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        .btn-prev { background: #95a5a6; color: white; }
+        .btn-next { background: var(--correct-color); color: white; }
+        button:hover { opacity: 0.8; }
+
+        /* Animation cho bắt mắt khi quay video */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <div class="header">
+        <div class="question-number" id="q-num">Câu 01 / 20</div>
+        <div class="timer" id="timer">20:00</div>
+    </div>
+
+    <div id="content-area" class="fade-in">
+        <div class="question-text" id="q-text">
+            다음 그림을 보고 맞는 단어를 고르십시오. <br>
+            (Nhìn hình vẽ sau và chọn từ đúng.)
+        </div>
+
+        <div class="image-container" id="q-image">
+            <img src="https://via.placeholder.com/300x200?text=EPS+TOPIK+IMAGE" alt="Question Image">
+        </div>
+
+        <div class="options-grid" id="options">
+            </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn-prev" onclick="prevQuestion()">Câu trước</button>
+        <button class="btn-next" onclick="nextQuestion()">Câu tiếp theo</button>
+    </div>
+</div>
+
+<script>
+    // Dữ liệu mẫu (Bạn có thể thêm nhiều câu hỏi vào đây)
+    const questions = [
+        {
+            id: 1,
+            text: "다음 그림을 보고 맞는 단어를 고르십시오.",
+            translation: "Nhìn hình vẽ sau và chọn từ đúng.",
+            image: "https://cdn-icons-png.flaticon.com/512/2853/2853814.png", // Ví dụ: Hình cái túi
+            options: ["가방", "구두", "모자", "안경"],
+            answer: 0
+        },
+        {
+            id: 2,
+            text: "이 사람은 무엇을 하고 있습니까?",
+            translation: "Người này đang làm gì?",
+            image: "https://cdn-icons-png.flaticon.com/512/1950/1950630.png", // Ví dụ: Người đang đọc sách
+            options: ["잠을 자고 있습니다", "책을 읽고 있습니다", "전화를 하고 있습니다", "운동을 하고 있습니다"],
+            answer: 1
+        }
+    ];
+
+    let currentIdx = 0;
+
+    function loadQuestion(idx) {
+        const q = questions[idx];
+        const container = document.getElementById('content-area');
+        
+        // Hiệu ứng chuyển cảnh
+        container.classList.remove('fade-in');
+        void container.offsetWidth; 
+        container.classList.add('fade-in');
+
+        document.getElementById('q-num').innerText = `Câu ${String(idx + 1).padStart(2, '0')} / ${questions.length}`;
+        document.getElementById('q-text').innerHTML = `${q.text} <br> <small style="color: #666; font-size: 1.2rem;">(${q.translation})</small>`;
+        document.getElementById('q-image').innerHTML = `<img src="${q.image}" alt="Question">`;
+        
+        const optionsDiv = document.getElementById('options');
+        optionsDiv.innerHTML = '';
+        q.options.forEach((opt, i) => {
+            optionsDiv.innerHTML += `
+                <div class="option-card" onclick="selectOption(this)">
+                    <span class="option-number">${i + 1}</span>
+                    <span class="option-text">${opt}</span>
+                </div>
+            `;
+        });
+    }
+
+    function selectOption(el) {
+        document.querySelectorAll('.option-card').forEach(card => card.classList.remove('selected'));
+        el.classList.add('selected');
+    }
+
+    function nextQuestion() {
+        if (currentIdx < questions.length - 1) {
+            currentIdx++;
+            loadQuestion(currentIdx);
+        }
+    }
+
+    function prevQuestion() {
+        if (currentIdx > 0) {
+            currentIdx--;
+            loadQuestion(currentIdx);
+        }
+    }
+
+    // Timer đơn giản
+    let time = 1200;
+    setInterval(() => {
+        time--;
+        let min = Math.floor(time / 60);
+        let sec = time % 60;
+        document.getElementById('timer').innerText = `${min}:${sec < 10 ? '0'+sec : sec}`;
+    }, 1000);
+
+    // Khởi tạo câu hỏi đầu tiên
+    loadQuestion(0);
+</script>
+
+</body>
+</html>

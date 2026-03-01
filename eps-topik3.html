@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPS-TOPIK Auto-Read for YouTube</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&family=Roboto:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --bg: #f8f9fa;
+            --correct: #27ae60;
+            --wrong: #e74c3c;
+        }
+
+        body {
+            font-family: 'Roboto', 'Noto Sans KR', sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #app-container {
+            width: 950px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+            padding: 30px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 15px;
+        }
+
+        .question-text {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            line-height: 1.5;
+            color: var(--primary);
+        }
+
+        .image-box {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .image-box img {
+            max-width: 300px;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .option-card {
+            padding: 22px;
+            border: 2px solid #eee;
+            border-radius: 12px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            background: #fff;
+        }
+
+        .option-card:hover {
+            border-color: var(--accent);
+        }
+
+        .option-card.correct {
+            background: var(--correct) !important;
+            color: white;
+            border-color: var(--correct);
+        }
+
+        .option-card.wrong {
+            background: var(--wrong) !important;
+            color: white;
+            border-color: var(--wrong);
+        }
+
+        .btn-audio {
+            background: #6c5ce7;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-bottom: 15px;
+            display: inline-flex;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .controls {
+            margin-top: 35px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+            font-weight: bold;
+        }
+
+        .btn-next {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-prev {
+            background: #95a5a6;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="app-container">
+        <div class="header">
+            <div id="q-num" style="font-weight: bold; font-size: 1.3rem; color: var(--accent);">CÂU 1 / 20</div>
+            <div style="color: #999;">EPS-TOPIK STUDY SYSTEM</div>
+        </div>
+
+        <div class="btn-audio" onclick="speakQuestion()">
+            <span style="margin-right:8px;">🔊</span> Đọc lại đề bài
+        </div>
+
+        <div id="q-text" class="question-text">Đang tải câu hỏi...</div>
+
+        <div class="image-box" id="q-image"></div>
+
+        <div class="options-grid" id="options"></div>
+
+        <div class="controls">
+            <button class="btn-prev" onclick="prevQuestion()">« Câu trước</button>
+            <button class="btn-next" onclick="nextQuestion()">Câu tiếp theo »</button>
+        </div>
+    </div>
+
+    <audio id="sound-correct" src="https://www.myinstants.com/media/sounds/correct.mp3"></audio>
+    <audio id="sound-wrong" src=""></audio>
+    <!-- https://www.myinstants.com/media/sounds/wrong-answer.mp3 -->
+
+    <script>
+        const questions = [
+            {
+                text: "다음 그림을 보고 맞는 단어를 고르십시오.",
+                translation: "Nhìn hình vẽ sau và chọn từ đúng.",
+                image: "https://cdn-icons-png.flaticon.com/512/2853/2853814.png",
+                options: ["가방", "구두", "모자", "안경"],
+                answer: 0
+            },
+            {
+                text: "이 사람은 무엇을 하고 있습니까?",
+                translation: "Người này đang làm gì?",
+                image: "https://cdn-icons-png.flaticon.com/512/1950/1950630.png",
+                options: ["잠을 자고 있습니다", "책을 읽고 있습니다", "전화를 하고 있습니다", "운동을 하고 있습니다"],
+                answer: 1
+            }
+        ];
+
+        let currentIdx = 0;
+        let canClick = true;
+
+        function loadQuestion(idx) {
+            // Dừng các giọng đọc đang dang dở trước khi sang câu mới
+            window.speechSynthesis.cancel();
+
+            canClick = true;
+            const q = questions[idx];
+            document.getElementById('q-num').innerText = `CÂU ${idx + 1} / ${questions.length}`;
+            document.getElementById('q-text').innerHTML = `${q.text}<br><span style="font-size: 1.2rem; color: #666; font-weight: normal;">(${q.translation})</span>`;
+            document.getElementById('q-image').innerHTML = `<img src="${q.image}">`;
+
+            const optionsDiv = document.getElementById('options');
+            optionsDiv.innerHTML = '';
+            q.options.forEach((opt, i) => {
+                optionsDiv.innerHTML += `<div class="option-card" onclick="checkAnswer(this, ${i})">
+                <span style="margin-right:15px; font-weight:bold; color: var(--accent);">${i + 1}.</span> ${opt}
+            </div>`;
+            });
+
+            // TỰ ĐỘNG ĐỌC KHI CHUYỂN CÂU
+            // Để một chút delay (500ms) cho mượt mà
+            setTimeout(() => {
+                speakQuestion();
+            }, 500);
+        }
+
+        function checkAnswer(el, selectedIdx) {
+            if (!canClick) return;
+            canClick = false;
+
+            const correctIdx = questions[currentIdx].answer;
+            if (selectedIdx === correctIdx) {
+                el.classList.add('correct');
+                document.getElementById('sound-correct').play();
+            } else {
+                el.classList.add('wrong');
+                document.getElementById('sound-wrong').play();
+                document.querySelectorAll('.option-card')[correctIdx].classList.add('correct');
+            }
+
+            // Đọc từ vựng của đáp án vừa chọn
+            speakText(questions[currentIdx].options[selectedIdx], 'ko-KR');
+        }
+
+        function speakQuestion() {
+            // Dừng mọi giọng đọc cũ để tránh đè lên nhau
+            window.speechSynthesis.cancel();
+
+            const q = questions[currentIdx];
+
+            // Tạo chuỗi đọc tiếng Hàn
+            const speakHan = new SpeechSynthesisUtterance(q.text);
+            setVoice(speakHan, 'ko-KR', 'Sun-Hi');
+
+            // Tạo chuỗi đọc tiếng Việt
+            const speakViet = new SpeechSynthesisUtterance(q.translation);
+            setVoice(speakViet, 'vi-VN', 'Hoài My');
+
+            // Đọc tiếng Hàn xong thì đọc tiếng Việt
+            window.speechSynthesis.speak(speakHan);
+            // speakHan.onend = () => {
+            //     // Nghỉ 0.5s giữa 2 thứ tiếng
+            //     setTimeout(() => {
+            //         window.speechSynthesis.speak(speakViet);
+            //     }, 500);
+            // };
+        }
+
+
+
+        function speakText(text, lang) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            const voiceName = (lang === 'ko-KR') ? 'Sun-Hi' : 'Hoài My';
+            setVoice(utterance, lang, voiceName);
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function setVoice(utterance, lang, preferredName) {
+            utterance.lang = lang;
+            utterance.rate = 0.85;
+            const voices = window.speechSynthesis.getVoices();
+            const voice = voices.find(v => v.name.includes(preferredName)) ||
+                voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+            if (voice) utterance.voice = voice;
+        }
+
+        function nextQuestion() {
+            if (currentIdx < questions.length - 1) {
+                currentIdx++;
+                loadQuestion(currentIdx);
+            }
+        }
+
+        function prevQuestion() {
+            if (currentIdx > 0) {
+                currentIdx--;
+                loadQuestion(currentIdx);
+            }
+        }
+
+        // Đảm bảo voices đã load trước khi chạy
+        window.speechSynthesis.onvoiceschanged = () => {
+            if (currentIdx === 0 && document.getElementById('options').innerHTML === "") {
+                loadQuestion(0);
+            }
+        };
+
+        // Khởi chạy lần đầu
+        loadQuestion(0);
+    </script>
+
+</body>
+
+</html>

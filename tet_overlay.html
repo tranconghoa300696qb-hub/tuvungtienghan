@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Livestream Tết Online</title>
+    <style>
+        /* Thiết lập nền trong suốt để dùng trong OBS */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: rgba(0, 0, 0, 0); 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #ffcc00;
+            text-shadow: 2px 2px 4px #000000;
+        }
+
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* Khung tiêu đề trên cùng */
+        #header {
+            text-align: center;
+            animation: bounce 2s infinite;
+        }
+
+        h1 {
+            font-size: 50px;
+            margin: 0;
+            color: #ff3333;
+            -webkit-text-stroke: 1px #ffcc00;
+        }
+
+        /* Bảng đếm ngược */
+        #countdown-box {
+            background: rgba(139, 0, 0, 0.7);
+            border: 3px solid #ffcc00;
+            border-radius: 15px;
+            padding: 15px 30px;
+            text-align: center;
+        }
+
+        #timer {
+            font-size: 40px;
+            font-weight: bold;
+        }
+
+        /* Câu chúc chạy ở dưới */
+        #marquee-container {
+            width: 100%;
+            background: rgba(255, 204, 0, 0.8);
+            color: #b30000;
+            padding: 10px 0;
+            font-weight: bold;
+            font-size: 24px;
+            white-space: nowrap;
+            overflow: hidden;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.3);
+        }
+
+        .marquee-text {
+            display: inline-block;
+            padding-left: 100%;
+            animation: marquee 20s linear infinite;
+        }
+
+        @keyframes marquee {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(-100%, 0); }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="container">
+    <div id="header">
+        <h1>CHÚC MỪNG NĂM MỚI 2026</h1>
+        <div style="font-size: 20px;">🧧 Đang Livestream Chơi Tết Online 🧧</div>
+    </div>
+
+    <div id="countdown-box">
+        <div>Đếm ngược đến Giao Thừa</div>
+        <div id="timer">00:00:00:00</div>
+    </div>
+
+    <div id="marquee-container">
+        <div class="marquee-text">
+            🧧 Chúc mừng năm mới An Khang Thịnh Vượng - Vạn Sự Như Ý! 🧨 Sức khỏe dồi dào, tỷ sự như mơ, làm ăn phát tài! 🌸 Xuân sang hái lộc, tiền vào như nước, tiền ra nhỏ giọt! 🧨
+        </div>
+    </div>
+</div>
+
+<script>
+    // Cài đặt ngày đích (Giao thừa 2026 - tính theo dương lịch hoặc bạn tự chỉnh)
+    const countDownDate = new Date("Feb 17, 2026 00:00:00").getTime();
+
+    const x = setInterval(function() {
+        const now = new Date().getTime();
+        const distance = countDownDate - now;
+
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        document.getElementById("timer").innerHTML = days + "n " + hours + "g "
+        + minutes + "p " + seconds + "s ";
+
+        if (distance < 0) {
+            clearInterval(x);
+            document.getElementById("timer").innerHTML = "CHÚC MỪNG NĂM MỚI!";
+        }
+    }, 1000);
+</script>
+
+</body>
+</html>

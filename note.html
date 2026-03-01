@@ -97,3 +97,6 @@ ADD UNIQUE (`slug`);
 
 ALTER TABLE `categories` 
 ADD COLUMN `slug` VARCHAR(255) NULL AFTER `type`;
+
+INSERT INTO `categories` (`title`, `type`, `slug`, `parent_id`) 
+VALUES ('Ngữ pháp', 'ngữ pháp', 'ngu-phap', 0);

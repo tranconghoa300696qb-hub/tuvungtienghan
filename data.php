@@ -1,25 +1,30 @@
 <?php
-// File này sẽ nhận category_id và trả về JSON để Javascript xử lý mà không cần load lại trang.
-header('Content-Type: application/json');
-$host = 'localhost';
-$user = 'root';
-$pass = '';
-$db   = 'korean_db';
+header('Content-Type: application/json; charset=utf-8');
+$conn = new mysqli("localhost", "root", "", "korean_db");
 
-$conn = new mysqli($host, $user, $pass, $db);
-if ($conn->connect_error) die(json_encode(['error' => 'Kết nối thất bại']));
+if ($conn->connect_error) {
+    die(json_encode(["error" => "Kết nối database thất bại"]));
+}
 
-$type = $_GET['type'] ?? 'categories';
+$type = $_GET['type'] ?? '';
 
-if ($type === 'categories') {
-    $result = $conn->query("SELECT * FROM categories");
+if ($type == 'categories') {
+    $parent_id = intval($_GET['parent_id'] ?? 0);
+    // Lấy danh mục
+    $sql = "SELECT id, title FROM categories WHERE parent_id = $parent_id";
+    $result = $conn->query($sql);
     echo json_encode($result->fetch_all(MYSQLI_ASSOC));
-} elseif ($type === 'vocab' && isset($_GET['cat_id'])) {
-    $cat_id = (int)$_GET['cat_id'];
-    $stmt = $conn->prepare("SELECT ko, vi, img FROM vocabulary WHERE category_id = ?");
-    $stmt->bind_param("i", $cat_id);
-    $stmt->execute();
-    echo json_encode($stmt->get_result()->fetch_all(MYSQLI_ASSOC));
+} 
+
+elseif ($type == 'vocab') {
+    $cat_id = intval($_GET['cat_id'] ?? 0);
+    // SQL của bạn dùng cột ko, vi, img nên ta SELECT đúng như vậy
+    $sql = "SELECT ko, vi, img FROM vocabulary WHERE category_id = $cat_id";
+    $result = $conn->query($sql);
+    $data = [];
+    while($row = $result->fetch_assoc()) {
+        $data[] = $row;
+    }
+    echo json_encode($data);
 }
 ?>
-
