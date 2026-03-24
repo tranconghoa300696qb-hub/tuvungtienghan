@@ -144,7 +144,7 @@ function getBestVoice(langCode) {
 
 // 2. Hàm Speak "Bọc Thép"
 function speak(text, langType) {
-    const cleanText = text.replace(/[,/]/g, ' ');
+    const cleanText = text.replace(/[,/()]/g, ' ');
     text = cleanText;
     return new Promise((resolve) => {
         // Giải phóng hàng chờ cũ ngay lập tức
